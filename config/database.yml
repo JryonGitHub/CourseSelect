@@ -1,11 +1,11 @@
 default: &default
   adapter: postgresql
-  encoding: unicode
+  encoding: UTF-8
   pool: 5
 
 development:
   <<: *default
-  database: courseselect_development
+  database: courseselect_developement
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".

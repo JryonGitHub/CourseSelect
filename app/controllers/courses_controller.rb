@@ -45,6 +45,7 @@ class CoursesController < ApplicationController
 
     #-------QiaoCode--------
   public
+  
   def open
     @course = Course.find_by_id(params[:id])
     if @course.update_attributes(:open=>true)
@@ -75,14 +76,32 @@ class CoursesController < ApplicationController
 
   def select
     @course=Course.find_by_id(params[:id])
-    current_user.courses<<@course
-    flash={:suceess => "成功选择课程: #{@course.name}"}
-    redirect_to courses_path, flash: flash
+    result = is_conflict?(@course)
+    if result[:flag]
+      flash={:suceess => "您选择的#{@course.name}与#{result[:course].name}时间冲突!"}
+      redirect_to courses_path, flash: flash
+    else
+      current_user.courses<<@course
+      if @course.limit_num == nil ||@course.student_num < @course.limit_num      
+        @course.student_num = @course.student_num + 1
+      else 
+        @course.student_num = @course.limit_num
+      end
+      @course.save
+      flash={:suceess => "成功选择课程: #{@course.name}"}
+      redirect_to courses_path, flash: flash
+    end
   end
 
   def quit
     @course=Course.find_by_id(params[:id])
     current_user.courses.delete(@course)
+    if @course.student_num > 0
+      @course.student_num = @course.student_num - 1
+    else
+      @course.student_num = 0
+    end
+    @course.save
     flash={:success => "成功退选课程: #{@course.name}"}
     redirect_to courses_path, flash: flash
   end
@@ -97,6 +116,20 @@ class CoursesController < ApplicationController
 
 
   private
+  
+  #-------------------------to avoid the conflict  time----------------------
+  def is_conflict?(course)
+    conflict_flag = false
+    value = ''
+    current_user.courses.each do |item|
+      if course.course_time.eql?(item.course_time)
+        conflict_flag = true
+        value = item
+        break
+      end
+    end
+      {:flag => conflict_flag, :course => value}    
+  end
 
   # Confirms a student logged-in user.
   def student_logged_in
